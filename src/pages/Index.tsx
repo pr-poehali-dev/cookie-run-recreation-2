@@ -6,6 +6,7 @@ interface DialogLine {
   type: 'narration' | 'vanilla' | 'shadow';
   text: string;
   showJumpscare?: boolean;
+  showSprite?: { image: string; text: string; effect?: 'blink' };
   choices?: { text: string; nextScene: string }[];
 }
 
@@ -23,6 +24,7 @@ const Index = () => {
   const [displayedText, setDisplayedText] = useState("");
   const [textComplete, setTextComplete] = useState(false);
   const [showJumpscare, setShowJumpscare] = useState(false);
+  const [showSprite, setShowSprite] = useState<{ image: string; text: string; effect?: 'blink' } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scareAudioRef = useRef<HTMLAudioElement | null>(null);
   const failAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,62 +49,231 @@ const Index = () => {
         },
         { 
           type: 'shadow', 
-          text: 'Привет Детлеф петух! Ну как те тут?! Круто?!',
+          text: 'Привет Детлеф! Ну как тебе тут?! Нравится?!'
+        },
+        { 
+          type: 'vanilla', 
+          text: 'Кто ты?! Что тебе от меня нужно?!' 
+        },
+        { 
+          type: 'shadow', 
+          text: 'Я твой самый страшный кошмар... или самая сладкая мечта? Хе-хе-хе...',
           choices: [
-            { text: 'да имбуля', nextScene: 'path1' },
-            { text: 'ОТПУСТИ МЕНЯ ШУТ', nextScene: 'bad_ending' }
+            { text: 'Попытаться поговорить с ним', nextScene: 'path1' },
+            { text: 'Попытаться убежать', nextScene: 'escape_attempt' }
           ]
         }
       ]
+    },
+    escape_attempt: {
+      id: 'escape_attempt',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
+      dialogs: [
+        {
+          type: 'narration',
+          text: 'Ванилла попытался убежать, но дверь оказалась заперта...'
+        },
+        {
+          type: 'shadow',
+          text: 'Думаешь так просто сбежать? Как грубо... Мне это не нравится.',
+          showSprite: { 
+            image: 'https://cdn.poehali.dev/files/7707ceb6-ae1c-4f17-be66-02021d6fa83f.jpeg', 
+            text: 'У ТЕБЯ ПЛОХОЕ ПОВЕДЕНИЕ' 
+          }
+        }
+      ],
+      isEnding: true
     },
     path1: {
       id: 'path1',
       background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
       dialogs: [
         {
+          type: 'vanilla',
+          text: 'Хорошо... давай поговорим. Что ты хочешь?'
+        },
+        {
           type: 'shadow',
-          text: 'Ха-ха! Молодец, что согласился! Тогда поиграем в игру...'
+          text: 'О, как мило! Ты согласился! Знаешь... мне здесь так одиноко...'
         },
         {
           type: 'vanilla',
-          text: 'В какую игру? Что происходит?!'
+          text: 'Одиноко? Но ты же похитил меня!'
         },
         {
           type: 'shadow',
-          text: 'Всё просто! Найди выход из подвала за 5 минут, или останешься здесь... НАВСЕГДА!',
+          text: 'Я просто хотел... чтобы кто-то был рядом. Знаешь, в темноте так страшно быть одному...'
+        },
+        {
+          type: 'narration',
+          text: 'В голосе Шадоу послышались странные нотки... печали?'
+        },
+        {
+          type: 'vanilla',
+          text: 'Я... я понимаю. Одиночество это тяжело.'
+        },
+        {
+          type: 'shadow',
+          text: 'Правда? Ты не боишься меня?',
           choices: [
-            { text: 'Искать выход', nextScene: 'good_ending' },
-            { text: 'Отказаться играть', nextScene: 'bad_ending' }
+            { text: 'Немного боюсь, но хочу понять тебя', nextScene: 'romance_path' },
+            { text: 'Конечно боюсь! Ты монстр!', nextScene: 'bad_ending' }
           ]
         }
       ]
     },
-    good_ending: {
-      id: 'good_ending',
-      background: 'linear-gradient(to bottom, #4a5568, #2d3748)',
+    romance_path: {
+      id: 'romance_path',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
       dialogs: [
         {
-          type: 'narration',
-          text: 'Ванилла нашёл скрытую дверь за старыми ящиками...'
+          type: 'shadow',
+          text: 'Ты... хочешь понять меня? Никто никогда не говорил мне таких слов...'
         },
         {
           type: 'vanilla',
-          text: 'Я... я нашёл выход! Я свободен!'
+          text: 'У всех есть своя история. Расскажи мне свою?'
         },
         {
           type: 'shadow',
-          text: 'Молодец, малыш! Ты прошёл мой тест! Удачи в следующий раз... Ха-ха-ха!'
+          text: 'Я... я был таким же, как ты. Но меня оставили здесь, в темноте... навсегда.'
+        },
+        {
+          type: 'narration',
+          text: 'Ванилла почувствовал странное тепло в груди. Сострадание? Или что-то большее?'
+        },
+        {
+          type: 'vanilla',
+          text: 'Мне жаль... никто не заслуживает такого.'
+        },
+        {
+          type: 'shadow',
+          text: 'Ты... особенный. Может быть... мы могли бы...',
+          showSprite: { 
+            image: 'https://cdn.poehali.dev/files/dbdb96f3-6bdd-4972-b8a3-05b109bbc262.jpeg', 
+            text: 'ЛЮБЛЮ ЕГО СИСИ' 
+          }
+        },
+        {
+          type: 'vanilla',
+          text: '...что? что мы могли бы?'
+        },
+        {
+          type: 'shadow',
+          text: 'Остаться... вместе?',
+          showSprite: { 
+            image: 'https://cdn.poehali.dev/files/7cde0ad6-5da8-48eb-bedb-c81f9eb0746e.jpeg', 
+            text: 'ЕГО ТОЖЕ' 
+          }
+        },
+        {
+          type: 'vanilla',
+          text: 'Я...',
+          choices: [
+            { text: 'Согласиться остаться с ним', nextScene: 'secret_moment' },
+            { text: 'Попросить отпустить тебя', nextScene: 'rejection_ending' }
+          ]
+        }
+      ]
+    },
+    secret_moment: {
+      id: 'secret_moment',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
+      dialogs: [
+        {
+          type: 'vanilla',
+          text: 'Я... я останусь с тобой.'
+        },
+        {
+          type: 'shadow',
+          text: 'ПРАВДА?! Ты останешься?! Я так счастлив!!!'
+        },
+        {
+          type: 'narration',
+          text: 'Внезапно вся атмосфера изменилась...'
+        },
+        {
+          type: 'narration',
+          text: 'Что-то идёт не так...',
+          showSprite: { 
+            image: 'https://cdn.poehali.dev/files/b39517c2-a924-4ef7-b997-368c88e45bb5.jpeg', 
+            text: 'СЕКРЕТНЫЙ МОМЕНТ',
+            effect: 'blink'
+          }
+        },
+        {
+          type: 'shadow',
+          text: 'АХАХАХАХА!!! ТЫ ПРАВДА ДУМАЛ, ЧТО Я БЫЛ СЕРЬЁЗЕН?!'
+        },
+        {
+          type: 'vanilla',
+          text: 'Что?! Но ты сказал...'
+        },
+        {
+          type: 'shadow',
+          text: 'А вы не обнаглели... Нет, его сиси я тоже люблю! ТОЛЬКО Я!'
+        },
+        {
+          type: 'narration',
+          text: 'Тьма начала сгущаться...',
+          showSprite: { 
+            image: 'https://cdn.poehali.dev/files/7707ceb6-ae1c-4f17-be66-02021d6fa83f.jpeg', 
+            text: 'У ТЕБЯ ПЛОХОЕ ПОВЕДЕНИЕ' 
+          }
+        }
+      ],
+      isEnding: true
+    },
+    rejection_ending: {
+      id: 'rejection_ending',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
+      dialogs: [
+        {
+          type: 'vanilla',
+          text: 'Прости... но я не могу остаться. У меня есть своя жизнь.'
+        },
+        {
+          type: 'shadow',
+          text: '...понятно.'
+        },
+        {
+          type: 'narration',
+          text: 'Наступила тяжёлая тишина...'
+        },
+        {
+          type: 'shadow',
+          text: 'Знаешь что? Уходи. Дверь открыта.'
+        },
+        {
+          type: 'vanilla',
+          text: 'Правда? Спасибо... и прости.'
+        },
+        {
+          type: 'narration',
+          text: 'Ванилла вышел на свободу. Но почему-то на душе было так тяжело...'
         }
       ],
       isEnding: true
     },
     bad_ending: {
       id: 'bad_ending',
-      background: 'linear-gradient(to bottom, #1e3a8a, #1e1b4b)',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
       dialogs: [
         {
           type: 'shadow',
-          text: 'Офигел'
+          text: 'МОНСТР?! Я МОНСТР?!'
+        },
+        {
+          type: 'vanilla',
+          text: 'Н-нет, я не то хотел...'
+        },
+        {
+          type: 'shadow',
+          text: 'НЕТ, ТЫ ВСЁ ПРАВИЛЬНО СКАЗАЛ. И ТЕПЕРЬ... ПОПЛАТИШЬСЯ!',
+          showSprite: { 
+            image: 'https://cdn.poehali.dev/files/7707ceb6-ae1c-4f17-be66-02021d6fa83f.jpeg', 
+            text: 'У ТЕБЯ ПЛОХОЕ ПОВЕДЕНИЕ' 
+          }
         }
       ],
       isEnding: true
@@ -165,13 +336,31 @@ const Index = () => {
       return;
     }
 
+    if (dialog.showSprite && textComplete) {
+      setShowSprite(dialog.showSprite);
+      if (dialog.showSprite.effect === 'blink') {
+        if (!scareAudioRef.current) {
+          scareAudioRef.current = new Audio('https://www.myinstants.com/media/sounds/metal-pipe-falling-sound-effect.mp3');
+          scareAudioRef.current.volume = 0.7;
+        }
+        scareAudioRef.current.currentTime = 0;
+        scareAudioRef.current.play().catch(() => {});
+      }
+      
+      setTimeout(() => {
+        setShowSprite(null);
+        setDialogIndex(dialogIndex + 1);
+      }, 2500);
+      return;
+    }
+
     if (dialogIndex < scene.dialogs.length - 1) {
       setDialogIndex(dialogIndex + 1);
     }
   };
 
   const handleChoice = (nextScene: string) => {
-    if (nextScene === 'bad_ending') {
+    if (nextScene === 'bad_ending' || nextScene === 'escape_attempt' || nextScene === 'secret_moment') {
       if (!failAudioRef.current) {
         failAudioRef.current = new Audio('https://www.myinstants.com/media/sounds/sad-violin.mp3');
         failAudioRef.current.volume = 0.6;
@@ -265,13 +454,32 @@ const Index = () => {
     );
   }
 
+  if (showSprite) {
+    return (
+      <div className={`min-h-screen bg-black flex flex-col items-center justify-center ${showSprite.effect === 'blink' ? 'animate-pulse' : ''}`}>
+        <img
+          src={showSprite.image}
+          alt="Sprite"
+          className={`max-w-2xl max-h-96 object-contain mb-8 ${showSprite.effect === 'blink' ? 'animate-ping' : ''}`}
+          style={showSprite.effect === 'blink' ? { animation: 'ping 0.5s ease-in-out infinite' } : {}}
+        />
+        <h2 className={`text-5xl font-bold text-white text-center px-4 ${showSprite.effect === 'blink' ? 'animate-bounce text-red-500' : ''}`}>
+          {showSprite.text}
+        </h2>
+      </div>
+    );
+  }
+
   if (scene.isEnding) {
+    const isGoodEnding = scene.id === 'rejection_ending';
+    const isBadEnding = scene.id === 'bad_ending' || scene.id === 'escape_attempt' || scene.id === 'secret_moment';
+    
     return (
       <div 
         className="min-h-screen flex items-center justify-center relative overflow-hidden"
-        style={{ background: scene.id === 'bad_ending' ? 'linear-gradient(to bottom, #1e3a8a, #1e1b4b)' : 'linear-gradient(to bottom, #4a5568, #2d3748)' }}
+        style={{ background: isBadEnding ? 'linear-gradient(to bottom, #1e3a8a, #1e1b4b)' : 'linear-gradient(to bottom, #4a5568, #2d3748)' }}
       >
-        {scene.id === 'bad_ending' && (
+        {isBadEnding && (
           <div className="absolute inset-0">
             <img
               src="https://cdn.poehali.dev/files/c52c4168-102e-4b57-9adb-5f47812a1584.jpeg"
@@ -281,26 +489,34 @@ const Index = () => {
           </div>
         )}
         
-        <div className="relative z-10 text-center px-4">
-          {scene.id === 'bad_ending' ? (
+        <div className="relative z-10 text-center px-4 max-w-4xl">
+          {isBadEnding ? (
             <>
               <div className="text-8xl mb-8 animate-bounce">💀</div>
               <h2 className="text-6xl font-bold text-red-500 mb-4 drop-shadow-[0_0_30px_rgba(239,68,68,1)]">
-                GAME OVER
+                ПЛОХАЯ КОНЦОВКА
               </h2>
-              <p className="text-3xl text-red-400 mb-8 font-bold">
-                {currentDialog.text}
-              </p>
+              <div className="space-y-4 mb-8">
+                {scene.dialogs.slice(0, -1).map((dialog, idx) => (
+                  <p key={idx} className="text-2xl text-white">
+                    {dialog.text}
+                  </p>
+                ))}
+              </div>
             </>
           ) : (
             <>
-              <div className="text-8xl mb-8 animate-bounce">🎉</div>
-              <h2 className="text-6xl font-bold text-green-400 mb-4 drop-shadow-[0_0_30px_rgba(74,222,128,1)]">
-                ПОБЕДА!
+              <div className="text-8xl mb-8 animate-bounce">💔</div>
+              <h2 className="text-6xl font-bold text-yellow-400 mb-4 drop-shadow-[0_0_30px_rgba(250,204,21,1)]">
+                ГОРЬКАЯ СВОБОДА
               </h2>
-              <p className="text-2xl text-green-300 mb-8">
-                Ты смог сбежать от Шадоу Милка!
-              </p>
+              <div className="space-y-4 mb-8">
+                {scene.dialogs.map((dialog, idx) => (
+                  <p key={idx} className="text-2xl text-gray-300">
+                    {dialog.text}
+                  </p>
+                ))}
+              </div>
             </>
           )}
           
