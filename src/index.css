@@ -172,3 +172,34 @@
 .animate-scroll-bg {
   animation: scroll-bg 20s linear infinite;
 }
+
+@keyframes glitch {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
+}
+
+.glitch {
+  animation: glitch 0.3s infinite;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-3d {
+  transform-style: preserve-3d;
+}
