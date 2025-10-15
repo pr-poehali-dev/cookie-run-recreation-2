@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface DialogLine {
-  type: 'narration' | 'vanilla' | 'shadow';
+  type: 'narration' | 'vanilla' | 'shadow' | 'darkcacao';
   text: string;
   showJumpscare?: boolean;
   showSprite?: { image: string; text: string; effect?: 'blink' };
@@ -25,7 +25,10 @@ const Index = () => {
   const [textComplete, setTextComplete] = useState(false);
   const [showJumpscare, setShowJumpscare] = useState(false);
   const [showSprite, setShowSprite] = useState<{ image: string; text: string; effect?: 'blink' } | null>(null);
+  const [textSpeed, setTextSpeed] = useState(50);
+  const [completedEndings, setCompletedEndings] = useState<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ambientAudioRef = useRef<HTMLAudioElement | null>(null);
   const scareAudioRef = useRef<HTMLAudioElement | null>(null);
   const failAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -171,10 +174,54 @@ const Index = () => {
           text: 'Я...',
           choices: [
             { text: 'Согласиться остаться с ним', nextScene: 'secret_moment' },
-            { text: 'Попросить отпустить тебя', nextScene: 'rejection_ending' }
+            { text: 'Попросить отпустить тебя', nextScene: 'rejection_ending' },
+            { text: 'Предложить ему вместе искать выход', nextScene: 'true_ending' }
           ]
         }
       ]
+    },
+    true_ending: {
+      id: 'true_ending',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
+      dialogs: [
+        {
+          type: 'vanilla',
+          text: 'Я не хочу тебя бросать... но и не хочу навсегда остаться здесь. Пойдём искать выход вместе?'
+        },
+        {
+          type: 'shadow',
+          text: '...вместе? Ты хочешь, чтобы я пошёл с тобой?'
+        },
+        {
+          type: 'vanilla',
+          text: 'Да. Никто не должен быть один в темноте.'
+        },
+        {
+          type: 'narration',
+          text: 'Шадоу Милк замер. Впервые за долгое время кто-то предложил ему... надежду.'
+        },
+        {
+          type: 'shadow',
+          text: '...хорошо. Давай попробуем.'
+        },
+        {
+          type: 'narration',
+          text: 'Они пошли по тёмным коридорам вместе. И впереди забрезжил свет...'
+        },
+        {
+          type: 'vanilla',
+          text: 'Смотри! Выход!'
+        },
+        {
+          type: 'shadow',
+          text: 'Спасибо тебе... Ванилла. Ты спас не только себя, но и меня.'
+        },
+        {
+          type: 'narration',
+          text: 'Вместе они вышли на свободу. Началась новая история...'
+        }
+      ],
+      isEnding: true
     },
     secret_moment: {
       id: 'secret_moment',
@@ -277,16 +324,75 @@ const Index = () => {
         }
       ],
       isEnding: true
+    },
+    ultimate_secret_ending: {
+      id: 'ultimate_secret_ending',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
+      dialogs: [
+        {
+          type: 'narration',
+          text: 'Ты прошёл все концовки этой истории... Но что-то изменилось...'
+        },
+        {
+          type: 'narration',
+          text: 'Атмосфера стала другой... Кто-то наблюдает за тобой...'
+        },
+        {
+          type: 'narration',
+          text: 'Вдруг Шадоу Милк исчез, а на его месте появилась новая тень...',
+          showJumpscare: true
+        },
+        {
+          type: 'darkcacao',
+          text: 'Приветствую, путник... Ты прошёл долгий путь.',
+          showSprite: {
+            image: 'https://cdn.poehali.dev/files/d9fbb67a-76a3-4359-b5cc-7c1a14fcffa0.jpeg',
+            text: 'СЕКРЕТНЫЙ МОМЕНТ',
+            effect: 'blink'
+          }
+        },
+        {
+          type: 'vanilla',
+          text: 'Кто... кто ты? Где Шадоу Милк?!'
+        },
+        {
+          type: 'darkcacao',
+          text: 'А вы не обнаглели... Нет, его сиси я тоже люблю!'
+        },
+        {
+          type: 'narration',
+          text: 'Реальность начала рушиться...',
+          showSprite: {
+            image: 'https://cdn.poehali.dev/files/05837585-74a7-4c4e-8d1b-7d66e4e550c6.jpeg',
+            text: 'У ТЕБЯ ПЛОХОЕ ПОВЕДЕНИЕ'
+          }
+        },
+        {
+          type: 'narration',
+          text: 'Конец... или только начало?'
+        }
+      ],
+      isEnding: true
     }
   };
 
   useEffect(() => {
+    if (gameStarted && !ambientAudioRef.current) {
+      ambientAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2466/2466-preview.mp3');
+      ambientAudioRef.current.loop = true;
+      ambientAudioRef.current.volume = 0.15;
+      ambientAudioRef.current.play().catch(() => {});
+    }
+    
     return () => {
       if (scareAudioRef.current) {
         scareAudioRef.current.pause();
       }
       if (failAudioRef.current) {
         failAudioRef.current.pause();
+      }
+      if (ambientAudioRef.current) {
+        ambientAudioRef.current.pause();
       }
     };
   }, [gameStarted]);
@@ -311,10 +417,10 @@ const Index = () => {
         setTextComplete(true);
         clearInterval(interval);
       }
-    }, 50);
+    }, textSpeed);
 
     return () => clearInterval(interval);
-  }, [currentScene, dialogIndex, gameStarted]);
+  }, [currentScene, dialogIndex, gameStarted, textSpeed]);
 
   const handleNext = () => {
     const scene = scenes[currentScene];
@@ -372,6 +478,12 @@ const Index = () => {
     setCurrentScene(nextScene);
     setDialogIndex(0);
   };
+  
+  const speedUpText = () => {
+    if (textSpeed > 10) {
+      setTextSpeed(10);
+    }
+  };
 
   const startGame = () => {
     setGameStarted(true);
@@ -380,9 +492,25 @@ const Index = () => {
   };
 
   const restartGame = () => {
+    const scene = scenes[currentScene];
+    if (scene.isEnding && scene.id !== 'ultimate_secret_ending') {
+      const newEndings = new Set(completedEndings);
+      newEndings.add(scene.id);
+      setCompletedEndings(newEndings);
+      
+      if (newEndings.size >= 4) {
+        setCurrentScene('ultimate_secret_ending');
+        setDialogIndex(0);
+        setGameStarted(true);
+        setTextSpeed(50);
+        return;
+      }
+    }
+    
     setGameStarted(false);
     setCurrentScene('start');
     setDialogIndex(0);
+    setTextSpeed(50);
     if (scareAudioRef.current) {
       scareAudioRef.current.pause();
       scareAudioRef.current.currentTime = 0;
@@ -390,6 +518,11 @@ const Index = () => {
     if (failAudioRef.current) {
       failAudioRef.current.pause();
       failAudioRef.current.currentTime = 0;
+    }
+    if (ambientAudioRef.current) {
+      ambientAudioRef.current.pause();
+      ambientAudioRef.current.currentTime = 0;
+      ambientAudioRef.current = null;
     }
   };
 
@@ -471,15 +604,16 @@ const Index = () => {
   }
 
   if (scene.isEnding) {
-    const isGoodEnding = scene.id === 'rejection_ending';
+    const isGoodEnding = scene.id === 'rejection_ending' || scene.id === 'true_ending';
     const isBadEnding = scene.id === 'bad_ending' || scene.id === 'escape_attempt' || scene.id === 'secret_moment';
+    const isSecretEnding = scene.id === 'ultimate_secret_ending';
     
     return (
       <div 
         className="min-h-screen flex items-center justify-center relative overflow-hidden"
-        style={{ background: isBadEnding ? 'linear-gradient(to bottom, #1e3a8a, #1e1b4b)' : 'linear-gradient(to bottom, #4a5568, #2d3748)' }}
+        style={{ background: isBadEnding || isSecretEnding ? 'linear-gradient(to bottom, #1e3a8a, #1e1b4b)' : 'linear-gradient(to bottom, #4a5568, #2d3748)' }}
       >
-        {isBadEnding && (
+        {(isBadEnding || isSecretEnding) && (
           <div className="absolute inset-0">
             <img
               src="https://cdn.poehali.dev/files/c52c4168-102e-4b57-9adb-5f47812a1584.jpeg"
@@ -490,7 +624,22 @@ const Index = () => {
         )}
         
         <div className="relative z-10 text-center px-4 max-w-4xl">
-          {isBadEnding ? (
+          {isSecretEnding ? (
+            <>
+              <div className="text-8xl mb-8 animate-bounce">👁️</div>
+              <h2 className="text-6xl font-bold text-purple-500 mb-4 drop-shadow-[0_0_30px_rgba(168,85,247,1)] animate-pulse">
+                СЕКРЕТНАЯ КОНЦОВКА
+              </h2>
+              <p className="text-xl text-purple-300 mb-6">Ты открыл все концовки...</p>
+              <div className="space-y-4 mb-8">
+                {scene.dialogs.map((dialog, idx) => (
+                  <p key={idx} className="text-2xl text-white">
+                    {dialog.text}
+                  </p>
+                ))}
+              </div>
+            </>
+          ) : isBadEnding ? (
             <>
               <div className="text-8xl mb-8 animate-bounce">💀</div>
               <h2 className="text-6xl font-bold text-red-500 mb-4 drop-shadow-[0_0_30px_rgba(239,68,68,1)]">
@@ -499,6 +648,20 @@ const Index = () => {
               <div className="space-y-4 mb-8">
                 {scene.dialogs.slice(0, -1).map((dialog, idx) => (
                   <p key={idx} className="text-2xl text-white">
+                    {dialog.text}
+                  </p>
+                ))}
+              </div>
+            </>
+          ) : scene.id === 'true_ending' ? (
+            <>
+              <div className="text-8xl mb-8 animate-bounce">✨</div>
+              <h2 className="text-6xl font-bold text-green-400 mb-4 drop-shadow-[0_0_30px_rgba(74,222,128,1)]">
+                ИСТИННАЯ КОНЦОВКА
+              </h2>
+              <div className="space-y-4 mb-8">
+                {scene.dialogs.map((dialog, idx) => (
+                  <p key={idx} className="text-2xl text-green-200">
                     {dialog.text}
                   </p>
                 ))}
@@ -564,16 +727,18 @@ const Index = () => {
               <img
                 src={currentDialog.type === 'vanilla' 
                   ? 'https://cdn.poehali.dev/files/8a55b115-da1f-4d2c-8611-d93c420ba153.jpeg'
+                  : currentDialog.type === 'darkcacao'
+                  ? 'https://cdn.poehali.dev/files/d9fbb67a-76a3-4359-b5cc-7c1a14fcffa0.jpeg'
                   : 'https://cdn.poehali.dev/files/808e85c0-7f2a-4e3d-a314-73ffa0755a6a.jpeg'
                 }
-                alt={currentDialog.type === 'vanilla' ? 'Pure Vanilla' : 'Shadow Milk'}
+                alt={currentDialog.type === 'vanilla' ? 'Pure Vanilla' : currentDialog.type === 'darkcacao' ? 'Dark Cacao' : 'Shadow Milk'}
                 className="w-32 h-32 object-contain animate-float"
               />
             </div>
           </div>
         )}
 
-        <Card className="bg-black/90 backdrop-blur-md border-2 border-blue-900 shadow-[0_0_30px_rgba(59,130,246,0.4)]">
+        <Card className="bg-black/90 backdrop-blur-md border-2 border-blue-900 shadow-[0_0_30px_rgba(59,130,246,0.4)]" onClick={speedUpText}>
           <CardContent className="p-6">
             {currentDialog.type === 'narration' ? (
               <p className="text-gray-400 text-lg leading-relaxed mb-4 min-h-[80px] italic">
@@ -583,16 +748,19 @@ const Index = () => {
             ) : (
               <>
                 <h3 className="text-2xl font-bold mb-3" style={{
-                  color: currentDialog.type === 'vanilla' ? '#fbbf24' : '#8b5cf6',
+                  color: currentDialog.type === 'vanilla' ? '#fbbf24' : currentDialog.type === 'darkcacao' ? '#7c3aed' : '#8b5cf6',
                   fontFamily: currentDialog.type === 'vanilla' ? 'Fredoka, sans-serif' : 'inherit'
                 }}>
-                  {currentDialog.type === 'vanilla' ? 'Pure Vanilla' : 'Shadow Milk'}
+                  {currentDialog.type === 'vanilla' ? 'Pure Vanilla' : currentDialog.type === 'darkcacao' ? 'Dark Cacao' : 'Shadow Milk'}
                 </h3>
                 <p className="text-white text-lg leading-relaxed mb-4 min-h-[80px]">
                   {displayedText}
                   {!textComplete && <span className="animate-pulse">▌</span>}
                 </p>
               </>
+            )}
+            {!textComplete && (
+              <p className="text-xs text-gray-500 text-center animate-pulse">Нажимай для ускорения текста</p>
             )}
 
             {textComplete && currentDialog.choices ? (
