@@ -110,17 +110,7 @@ const Index = () => {
   };
 
   useEffect(() => {
-    if (gameStarted && !audioRef.current) {
-      audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2462/2462-preview.mp3');
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.3;
-      audioRef.current.play();
-    }
-
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
       if (scareAudioRef.current) {
         scareAudioRef.current.pause();
       }
@@ -162,9 +152,10 @@ const Index = () => {
     if (dialog.showJumpscare && textComplete) {
       setShowJumpscare(true);
       if (!scareAudioRef.current) {
-        scareAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2803/2803-preview.mp3');
-        scareAudioRef.current.volume = 0.6;
+        scareAudioRef.current = new Audio('https://www.myinstants.com/media/sounds/metal-pipe-falling-sound-effect.mp3');
+        scareAudioRef.current.volume = 0.7;
       }
+      scareAudioRef.current.currentTime = 0;
       scareAudioRef.current.play().catch(() => {});
       
       setTimeout(() => {
@@ -182,9 +173,10 @@ const Index = () => {
   const handleChoice = (nextScene: string) => {
     if (nextScene === 'bad_ending') {
       if (!failAudioRef.current) {
-        failAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
-        failAudioRef.current.volume = 0.5;
+        failAudioRef.current = new Audio('https://www.myinstants.com/media/sounds/sad-violin.mp3');
+        failAudioRef.current.volume = 0.6;
       }
+      failAudioRef.current.currentTime = 0;
       failAudioRef.current.play().catch(() => {});
     }
     
@@ -202,10 +194,13 @@ const Index = () => {
     setGameStarted(false);
     setCurrentScene('start');
     setDialogIndex(0);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
+    if (scareAudioRef.current) {
+      scareAudioRef.current.pause();
+      scareAudioRef.current.currentTime = 0;
+    }
+    if (failAudioRef.current) {
+      failAudioRef.current.pause();
+      failAudioRef.current.currentTime = 0;
     }
   };
 
