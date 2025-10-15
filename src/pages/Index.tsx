@@ -30,7 +30,7 @@ const Index = () => {
   const scenes: Record<string, Scene> = {
     start: {
       id: 'start',
-      background: 'linear-gradient(to bottom, #1a1a2e, #0f0f1e)',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
       dialogs: [
         { 
           type: 'narration', 
@@ -57,7 +57,7 @@ const Index = () => {
     },
     path1: {
       id: 'path1',
-      background: 'linear-gradient(to bottom, #1a1a2e, #0f0f1e)',
+      background: 'https://cdn.poehali.dev/projects/9105be04-580e-41b4-b0b0-8af956d7d258/files/fb652899-56ad-4098-8afb-0c608098044b.jpg',
       dialogs: [
         {
           type: 'shadow',
@@ -165,7 +165,7 @@ const Index = () => {
         scareAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2803/2803-preview.mp3');
         scareAudioRef.current.volume = 0.6;
       }
-      scareAudioRef.current.play();
+      scareAudioRef.current.play().catch(() => {});
       
       setTimeout(() => {
         setShowJumpscare(false);
@@ -185,7 +185,7 @@ const Index = () => {
         failAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
         failAudioRef.current.volume = 0.5;
       }
-      failAudioRef.current.play();
+      failAudioRef.current.play().catch(() => {});
     }
     
     setCurrentScene(nextScene);
@@ -323,8 +323,15 @@ const Index = () => {
   return (
     <div 
       className="min-h-screen relative overflow-hidden"
-      style={{ background: scene.background }}
     >
+      <div 
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ 
+          backgroundImage: `url('${scene.background}')`,
+          filter: 'brightness(0.6)'
+        }}
+      />
+      <div className="absolute inset-0 bg-black/40" />
       <div className="rain-container absolute inset-0 pointer-events-none z-10">
         {Array.from({ length: 100 }).map((_, i) => (
           <div
