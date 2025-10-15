@@ -232,10 +232,7 @@ const Index = () => {
           <Button
             onClick={startGame}
             className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-bold text-2xl px-16 py-8 rounded-lg shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:shadow-[0_0_50px_rgba(59,130,246,0.7)] transition-all duration-300 hover:scale-105 border-2 border-blue-500"
-          >
-            <Icon name="BookOpen" className="mr-3" size={32} />
-            НАЧАТЬ
-          </Button>
+          >Начинай махыч </Button>
         </div>
       </div>
     );
