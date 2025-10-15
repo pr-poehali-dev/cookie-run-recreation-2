@@ -203,3 +203,72 @@
 .perspective-3d {
   transform-style: preserve-3d;
 }
+
+.rain-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rain-drop {
+  position: absolute;
+  top: -10%;
+  width: 2px;
+  height: 50px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(174, 194, 224, 0.3),
+    transparent
+  );
+  animation: rain-fall linear infinite;
+}
+
+@keyframes rain-fall {
+  0% {
+    top: -10%;
+    opacity: 0.8;
+  }
+  100% {
+    top: 110%;
+    opacity: 0;
+  }
+}
+
+.blood-drip-text {
+  color: #3b82f6;
+  text-shadow:
+    0 0 20px rgba(59, 130, 246, 0.8),
+    0 0 40px rgba(59, 130, 246, 0.6),
+    2px 4px 0 rgba(220, 38, 38, 0.9),
+    4px 8px 0 rgba(220, 38, 38, 0.7),
+    6px 12px 0 rgba(220, 38, 38, 0.5),
+    8px 16px 10px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.blood-drip-text::after {
+  content: "";
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  width: 4px;
+  height: 30px;
+  background: linear-gradient(to bottom, rgba(220, 38, 38, 0.8), transparent);
+  animation: drip 3s ease-in-out infinite;
+}
+
+@keyframes drip {
+  0%,
+  100% {
+    height: 0;
+    opacity: 0;
+  }
+  50% {
+    height: 30px;
+    opacity: 1;
+  }
+}
