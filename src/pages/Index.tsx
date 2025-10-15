@@ -1,355 +1,373 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Icon from "@/components/ui/icon";
-import { useToast } from "@/hooks/use-toast";
-
-interface Character {
-  id: number;
-  name: string;
-  image: string;
-  hp: number;
-  maxHp: number;
-  attack: number;
-  defense: number;
-  rarity: string;
-  type: string;
-  isPlayer: boolean;
-}
 
 const Index = () => {
-  const { toast } = useToast();
   const [playerHp, setPlayerHp] = useState(100);
   const [enemyHp, setEnemyHp] = useState(100);
-  const [isPlayerTurn, setIsPlayerTurn] = useState(true);
-  const [battleLog, setBattleLog] = useState<string[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
+  const [playerX, setPlayerX] = useState(50);
+  const [playerY, setPlayerY] = useState(50);
+  const [enemyDistance, setEnemyDistance] = useState(100);
+  const [showDarkMagic, setShowDarkMagic] = useState(false);
+  const [showLightMagic, setShowLightMagic] = useState(false);
+  const [joystickActive, setJoystickActive] = useState(false);
+  const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
+  const [trees, setTrees] = useState<{ x: number; y: number; id: number }[]>([]);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const funnyAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const player: Character = {
-    id: 1,
-    name: "Pure Vanilla",
-    image: "https://cdn.poehali.dev/files/fa659242-67d9-437e-9f84-22a30cf96914.jpeg",
-    hp: 100,
-    maxHp: 100,
-    attack: 35,
-    defense: 25,
-    rarity: "Древний",
-    type: "Целитель",
-    isPlayer: true
-  };
+  useEffect(() => {
+    if (gameStarted) {
+      const newTrees = Array.from({ length: 15 }, (_, i) => ({
+        x: Math.random() * 90 + 5,
+        y: Math.random() * 90 + 5,
+        id: i
+      }));
+      setTrees(newTrees);
+    }
+  }, [gameStarted]);
 
-  const enemy: Character = {
-    id: 2,
-    name: "Shadow Milk",
-    image: "https://cdn.poehali.dev/files/26d7468a-0bc8-400f-80f5-4398242213ac.jpeg",
-    hp: 100,
-    maxHp: 100,
-    attack: 40,
-    defense: 20,
-    rarity: "Зверь",
-    type: "Тёмная магия",
-    isPlayer: false
-  };
+  useEffect(() => {
+    if (!gameStarted) return;
+    
+    const interval = setInterval(() => {
+      setEnemyDistance(prev => {
+        const newDistance = prev - 2;
+        if (newDistance <= 0) {
+          setPlayerHp(h => Math.max(0, h - 15));
+          setShowDarkMagic(true);
+          setTimeout(() => setShowDarkMagic(false), 800);
+          return 100;
+        }
+        return newDistance;
+      });
 
-  const startBattle = () => {
+      setTrees(prev => prev.map(tree => ({
+        ...tree,
+        y: tree.y + 1.5 > 100 ? Math.random() * 20 : tree.y + 1.5
+      })));
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [gameStarted]);
+
+  useEffect(() => {
+    if (playerHp <= 30 && playerHp > 0 && gameStarted) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audioRef.current.loop = true;
+        audioRef.current.volume = 0.3;
+      }
+      audioRef.current.play();
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [playerHp, gameStarted]);
+
+  useEffect(() => {
+    if (enemyHp <= 30 && enemyHp > 0 && gameStarted) {
+      if (!funnyAudioRef.current) {
+        funnyAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+        funnyAudioRef.current.loop = true;
+        funnyAudioRef.current.volume = 0.4;
+      }
+      funnyAudioRef.current.play();
+    } else if (funnyAudioRef.current) {
+      funnyAudioRef.current.pause();
+      funnyAudioRef.current.currentTime = 0;
+    }
+  }, [enemyHp, gameStarted]);
+
+  const startGame = () => {
     setGameStarted(true);
     setPlayerHp(100);
     setEnemyHp(100);
-    setIsPlayerTurn(true);
-    setBattleLog(["⚔️ Битва началась!"]);
-    toast({
-      title: "🍪 Битва началась!",
-      description: `${player.name} против ${enemy.name}`,
-    });
+    setPlayerX(50);
+    setPlayerY(50);
+    setEnemyDistance(100);
+  };
+
+  const handleJoystickMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!joystickActive) return;
+    
+    const joystick = e.currentTarget as HTMLElement;
+    const rect = joystick.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    let clientX, clientY;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    const x = clientX - rect.left - centerX;
+    const y = clientY - rect.top - centerY;
+    
+    const distance = Math.sqrt(x * x + y * y);
+    const maxDistance = 40;
+    const ratio = Math.min(distance / maxDistance, 1);
+    
+    const angle = Math.atan2(y, x);
+    const joyX = Math.cos(angle) * ratio * maxDistance;
+    const joyY = Math.sin(angle) * ratio * maxDistance;
+    
+    setJoystickPos({ x: joyX, y: joyY });
+    
+    setPlayerX(prev => Math.max(5, Math.min(95, prev + (joyX / 10))));
+    setPlayerY(prev => Math.max(5, Math.min(95, prev + (joyY / 10))));
   };
 
   const handleAttack = () => {
-    if (!isPlayerTurn || playerHp <= 0 || enemyHp <= 0) return;
-
-    const damage = Math.floor(Math.random() * 15) + player.attack - 20;
-    const actualDamage = Math.max(damage, 10);
-    const newEnemyHp = Math.max(0, enemyHp - actualDamage);
+    if (playerHp <= 0 || enemyHp <= 0) return;
     
-    setEnemyHp(newEnemyHp);
-    setBattleLog(prev => [...prev, `⚔️ ${player.name} атакует! Урон: ${actualDamage}`]);
-
-    if (newEnemyHp <= 0) {
-      setTimeout(() => {
-        toast({
-          title: "🎉 Победа!",
-          description: `${player.name} победил ${enemy.name}!`,
-        });
-        setBattleLog(prev => [...prev, `🎉 ${player.name} одержал победу!`]);
-      }, 500);
-      return;
-    }
-
-    setIsPlayerTurn(false);
-    setTimeout(() => enemyTurn(newEnemyHp), 1500);
+    setShowLightMagic(true);
+    const damage = Math.floor(Math.random() * 10) + 15;
+    setEnemyHp(prev => Math.max(0, prev - damage));
+    setTimeout(() => setShowLightMagic(false), 600);
   };
 
-  const handleHeal = () => {
-    if (!isPlayerTurn || playerHp <= 0 || enemyHp <= 0) return;
-
-    const healAmount = Math.floor(Math.random() * 15) + 20;
-    const newPlayerHp = Math.min(100, playerHp + healAmount);
-    
-    setPlayerHp(newPlayerHp);
-    setBattleLog(prev => [...prev, `✨ ${player.name} исцеляет себя! +${healAmount} HP`]);
-
-    setIsPlayerTurn(false);
-    setTimeout(() => enemyTurn(enemyHp), 1500);
+  const handleJoystickEnd = () => {
+    setJoystickActive(false);
+    setJoystickPos({ x: 0, y: 0 });
   };
 
-  const enemyTurn = (currentEnemyHp: number) => {
-    if (currentEnemyHp <= 0) return;
+  if (!gameStarted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] flex items-center justify-center relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-20 bg-cover bg-center"
+          style={{ backgroundImage: `url('https://cdn.poehali.dev/files/137f0088-23c5-42dd-a457-d7e3e2360ace.jpeg')` }}
+        />
+        <div className="relative z-10 text-center px-4">
+          <h1 className="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#8b5cf6] via-[#6366f1] to-[#3b82f6] drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] mb-8 animate-pulse">
+            COOKIE RUN ESCAPE
+          </h1>
+          <p className="text-2xl text-purple-300 mb-12 drop-shadow-lg">
+            🏃 Убегай от Shadow Milk! 💀
+          </p>
+          <Button
+            onClick={startGame}
+            className="bg-gradient-to-r from-[#8b5cf6] to-[#6366f1] hover:from-[#6366f1] hover:to-[#8b5cf6] text-white font-bold text-2xl px-16 py-10 rounded-full shadow-[0_12px_30px_rgba(139,92,246,0.6)] hover:shadow-[0_16px_40px_rgba(139,92,246,0.8)] transition-all duration-300 hover:scale-110 border-4 border-purple-400"
+          >
+            <Icon name="Play" className="mr-3" size={32} />
+            НАЧАТЬ ИГРУ
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-    const damage = Math.floor(Math.random() * 15) + enemy.attack - 20;
-    const actualDamage = Math.max(damage, 10);
-    const newPlayerHp = Math.max(0, playerHp - actualDamage);
-    
-    setPlayerHp(newPlayerHp);
-    setBattleLog(prev => [...prev, `💀 ${enemy.name} атакует! Урон: ${actualDamage}`]);
+  if (playerHp <= 0) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-950 to-black opacity-60" />
+        <div className="relative z-10 text-center px-4">
+          <h1 className="text-6xl font-bold text-red-500 mb-8 drop-shadow-[0_0_30px_rgba(239,68,68,1)] animate-pulse">
+            ПРОИГРАЛ ЛОХ,<br />ТЕПЕРЬ ТЫ ПРИКОЛИСТ
+          </h1>
+          <img 
+            src="https://cdn.poehali.dev/files/93b59b95-c7b0-4e1c-8e90-6302b769c0ec.jpeg"
+            alt="Game Over"
+            className="w-96 mx-auto mb-8 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.5)] border-4 border-red-500"
+          />
+          <Button
+            onClick={startGame}
+            className="bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white font-bold text-xl px-12 py-8 rounded-full shadow-[0_8px_20px_rgba(239,68,68,0.5)] hover:scale-105 transition-all border-4 border-red-400"
+          >
+            <Icon name="RotateCcw" className="mr-2" size={24} />
+            Попробовать снова
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-    if (newPlayerHp <= 0) {
-      setTimeout(() => {
-        toast({
-          title: "💔 Поражение",
-          description: `${enemy.name} победил...`,
-          variant: "destructive"
-        });
-        setBattleLog(prev => [...prev, `💔 ${enemy.name} одержал победу...`]);
-      }, 500);
-      return;
-    }
-
-    setTimeout(() => setIsPlayerTurn(true), 1000);
-  };
+  if (enemyHp <= 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-200 via-amber-200 to-orange-200 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute text-4xl animate-bounce"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${1 + Math.random() * 2}s`
+              }}
+            >
+              🎉
+            </div>
+          ))}
+        </div>
+        <div className="relative z-10 text-center px-4">
+          <div className="text-9xl mb-8 animate-bounce">🏆</div>
+          <h1 className="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-amber-600 drop-shadow-lg mb-8">
+            ПОБЕДА!
+          </h1>
+          <p className="text-3xl text-amber-800 font-bold mb-8">
+            Ты победил Shadow Milk! 🎊
+          </p>
+          <Button
+            onClick={startGame}
+            className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-amber-500 hover:to-yellow-500 text-amber-900 font-bold text-xl px-12 py-8 rounded-full shadow-[0_8px_20px_rgba(245,158,11,0.5)] hover:scale-105 transition-all border-4 border-yellow-300"
+          >
+            <Icon name="RotateCcw" className="mr-2" size={24} />
+            Играть ещё раз
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] overflow-hidden relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#1a472a] via-[#2d5016] to-[#1a3a1a] relative overflow-hidden">
       <div 
-        className="absolute inset-0 opacity-30 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url('https://cdn.poehali.dev/files/137f0088-23c5-42dd-a457-d7e3e2360ace.jpeg')` }}
+        className="absolute inset-0 opacity-40 bg-cover bg-center animate-scroll-bg"
+        style={{ backgroundImage: `url('https://cdn.poehali.dev/files/d0f97b68-e159-421f-b8f0-b08e0c8ae6f9.jpeg')` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1a1a2e]/80 to-[#1a1a2e]" />
 
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        <header className="text-center mb-8 animate-bounce-in">
-          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#8b5cf6] via-[#6366f1] to-[#3b82f6] drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] tracking-tight mb-2">
-            COOKIE RUN: KINGDOM
-          </h1>
-          <p className="text-2xl text-purple-300 font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-            ⚔️ Битва: {player.name} vs {enemy.name} ⚔️
-          </p>
-        </header>
+      {showDarkMagic && (
+        <div className="fixed inset-0 z-50 pointer-events-none animate-pulse">
+          <div className="absolute inset-0 bg-purple-900/60" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-9xl animate-spin">💀</div>
+          </div>
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-4 h-4 bg-purple-500 rounded-full animate-ping"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 0.5}s`
+              }}
+            />
+          ))}
+        </div>
+      )}
 
-        {!gameStarted ? (
-          <div className="max-w-4xl mx-auto">
-            <Card className="bg-black/70 backdrop-blur-md border-4 border-purple-600 shadow-[0_12px_40px_rgba(139,92,246,0.5)] mb-8">
-              <CardContent className="p-8 text-center">
-                <div className="text-6xl mb-4">🍪⚔️🍪</div>
-                <h3 className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]">
-                  Готов к битве?
-                </h3>
-                <p className="text-lg text-purple-200 mb-8">
-                  Битва добра против зла! Используй атаки и исцеление, чтобы победить Shadow Milk!
-                </p>
-                <Button 
-                  onClick={startBattle}
-                  size="lg"
-                  className="bg-gradient-to-r from-[#8b5cf6] to-[#6366f1] hover:from-[#6366f1] hover:to-[#8b5cf6] text-white font-bold text-xl px-12 py-8 rounded-full shadow-[0_8px_20px_rgba(139,92,246,0.5)] hover:shadow-[0_12px_30px_rgba(139,92,246,0.7)] transition-all duration-300 hover:scale-105 border-4 border-purple-400"
-                >
-                  <Icon name="Swords" className="mr-3" size={28} />
-                  Начать битву!
-                </Button>
-              </CardContent>
-            </Card>
+      {showLightMagic && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <div className="absolute inset-0 bg-yellow-400/30" />
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute text-6xl animate-ping"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDuration: '0.6s'
+              }}
+            >
+              ✨
+            </div>
+          ))}
+        </div>
+      )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Card className="bg-gradient-to-br from-amber-100 to-orange-100 border-4 border-amber-400 shadow-[0_8px_25px_rgba(251,191,36,0.4)]">
-                <div className="relative bg-gradient-to-br from-[#FFD93D] to-[#FFA500] p-8">
-                  <div className="absolute top-2 right-2 text-3xl animate-sparkle">✨</div>
-                  <img
-                    src={player.image}
-                    alt={player.name}
-                    className="w-full h-64 object-contain drop-shadow-[0_8px_15px_rgba(0,0,0,0.3)]"
-                  />
-                </div>
-                <CardContent className="p-6">
-                  <div className="text-center mb-4">
-                    <h4 className="text-3xl font-bold text-[#2C1810] mb-2">{player.name}</h4>
-                    <Badge className="bg-gradient-to-r from-[#FFD93D] to-[#FFA500] text-[#2C1810] font-bold text-lg px-4 py-1">
-                      {player.rarity}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2 text-center">
-                    <p className="text-lg"><span className="font-bold">⚔️ Атака:</span> {player.attack}</p>
-                    <p className="text-lg"><span className="font-bold">🛡️ Защита:</span> {player.defense}</p>
-                    <Badge className="w-full justify-center py-2 bg-gradient-to-r from-[#4ECDC4] to-[#2C9E96] text-white font-bold text-lg">
-                      {player.type}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-4 border-purple-500 shadow-[0_8px_25px_rgba(139,92,246,0.5)]">
-                <div className="relative bg-gradient-to-br from-[#1e1b4b] to-[#0f172a] p-8">
-                  <div className="absolute top-2 left-2 text-3xl animate-sparkle">💀</div>
-                  <img
-                    src={enemy.image}
-                    alt={enemy.name}
-                    className="w-full h-64 object-contain drop-shadow-[0_8px_15px_rgba(0,0,0,0.3)]"
-                  />
-                </div>
-                <CardContent className="p-6">
-                  <div className="text-center mb-4">
-                    <h4 className="text-3xl font-bold text-purple-100 mb-2">{enemy.name}</h4>
-                    <Badge className="bg-gradient-to-r from-[#7B1FA2] to-[#4A148C] text-white font-bold text-lg px-4 py-1">
-                      {enemy.rarity}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2 text-center">
-                    <p className="text-lg text-purple-200"><span className="font-bold">⚔️ Атака:</span> {enemy.attack}</p>
-                    <p className="text-lg text-purple-200"><span className="font-bold">🛡️ Защита:</span> {enemy.defense}</p>
-                    <Badge className="w-full justify-center py-2 bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-bold text-lg">
-                      {enemy.type}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4">
+        <div className="bg-black/80 backdrop-blur-md rounded-2xl p-4 border-4 border-purple-500 shadow-[0_0_30px_rgba(139,92,246,0.6)]">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="Heart" size={20} className="text-red-500" />
+                <span className="text-white font-bold">Pure Vanilla: {playerHp}</span>
+              </div>
+              <Progress value={playerHp} className="h-3" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="Skull" size={20} className="text-purple-400" />
+                <span className="text-purple-200 font-bold">Shadow Milk: {enemyHp}</span>
+              </div>
+              <Progress value={enemyHp} className="h-3" />
             </div>
           </div>
-        ) : (
-          <div className="max-w-6xl mx-auto space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className={`bg-gradient-to-br from-amber-50 to-orange-50 border-4 ${isPlayerTurn ? 'border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.6)] scale-105' : 'border-amber-200'} transition-all duration-300`}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <img
-                      src={player.image}
-                      alt={player.name}
-                      className="w-24 h-24 object-contain rounded-full bg-gradient-to-br from-[#FFD93D] to-[#FFA500] p-2 border-4 border-white shadow-lg"
-                    />
-                    <div className="flex-1">
-                      <h4 className="text-2xl font-bold text-[#2C1810] mb-1">{player.name}</h4>
-                      <Badge className="bg-gradient-to-r from-[#4ECDC4] to-[#2C9E96] text-white">
-                        {player.type}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold flex items-center gap-1">
-                        <Icon name="Heart" size={18} className="text-red-500" />
-                        HP: {playerHp}/100
-                      </span>
-                      <span className={playerHp > 50 ? "text-green-600" : playerHp > 20 ? "text-yellow-600" : "text-red-600"}>
-                        {playerHp}%
-                      </span>
-                    </div>
-                    <Progress value={playerHp} className="h-4" />
-                  </div>
-                </CardContent>
-              </Card>
+        </div>
+      </div>
 
-              <Card className={`bg-gradient-to-br from-slate-800 to-slate-900 border-4 ${!isPlayerTurn && playerHp > 0 && enemyHp > 0 ? 'border-purple-500 shadow-[0_0_30px_rgba(139,92,246,0.8)] scale-105' : 'border-purple-400'} transition-all duration-300`}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <img
-                      src={enemy.image}
-                      alt={enemy.name}
-                      className="w-24 h-24 object-contain rounded-full bg-gradient-to-br from-[#1e1b4b] to-[#0f172a] p-2 border-4 border-purple-500 shadow-lg"
-                    />
-                    <div className="flex-1">
-                      <h4 className="text-2xl font-bold text-purple-100 mb-1">{enemy.name}</h4>
-                      <Badge className="bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white">
-                        {enemy.type}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold flex items-center gap-1">
-                        <Icon name="Skull" size={18} className="text-purple-700" />
-                        HP: {enemyHp}/100
-                      </span>
-                      <span className={enemyHp > 50 ? "text-green-600" : enemyHp > 20 ? "text-yellow-600" : "text-red-600"}>
-                        {enemyHp}%
-                      </span>
-                    </div>
-                    <Progress value={enemyHp} className="h-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="bg-black/70 backdrop-blur-md border-4 border-purple-600">
-              <CardContent className="p-6">
-                <h3 className="text-2xl font-bold mb-4 text-center text-purple-100">
-                  {isPlayerTurn ? "🎮 Твой ход!" : "⏳ Ход противника..."}
-                </h3>
-                <div className="flex gap-4 justify-center flex-wrap">
-                  <Button 
-                    onClick={handleAttack}
-                    disabled={!isPlayerTurn || playerHp <= 0 || enemyHp <= 0}
-                    size="lg"
-                    className="bg-gradient-to-r from-[#ef4444] to-[#dc2626] hover:from-[#dc2626] hover:to-[#ef4444] text-white font-bold text-lg px-8 py-6 rounded-full shadow-[0_8px_20px_rgba(239,68,68,0.5)] hover:shadow-[0_12px_30px_rgba(239,68,68,0.7)] transition-all duration-300 hover:scale-105 border-4 border-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Icon name="Sword" className="mr-2" size={24} />
-                    Атаковать
-                  </Button>
-                  <Button 
-                    onClick={handleHeal}
-                    disabled={!isPlayerTurn || playerHp <= 0 || enemyHp <= 0}
-                    size="lg"
-                    className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#10b981] text-white font-bold text-lg px-8 py-6 rounded-full shadow-[0_8px_20px_rgba(16,185,129,0.5)] hover:shadow-[0_12px_30px_rgba(16,185,129,0.7)] transition-all duration-300 hover:scale-105 border-4 border-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Icon name="Sparkles" className="mr-2" size={24} />
-                    Исцелить
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-black/60 backdrop-blur-md border-4 border-slate-600 max-h-64 overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-purple-100">
-                  <Icon name="ScrollText" size={20} />
-                  Лог битвы
-                </h3>
-                <div className="space-y-1 overflow-y-auto max-h-40">
-                  {battleLog.slice().reverse().map((log, index) => (
-                    <p key={index} className="text-sm text-purple-200 p-2 bg-slate-800/70 rounded border border-purple-500/30">
-                      {log}
-                    </p>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {(playerHp <= 0 || enemyHp <= 0) && (
-              <Card className="bg-black/80 backdrop-blur-md border-4 border-purple-600 shadow-[0_12px_40px_rgba(139,92,246,0.6)]">
-                <CardContent className="p-8 text-center">
-                  <div className="text-6xl mb-4">{playerHp > 0 ? '🎉' : '💔'}</div>
-                  <h3 className="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]">
-                    {playerHp > 0 ? 'Победа!' : 'Поражение...'}
-                  </h3>
-                  <Button 
-                    onClick={startBattle}
-                    size="lg"
-                    className="bg-gradient-to-r from-[#8b5cf6] to-[#6366f1] hover:from-[#6366f1] hover:to-[#8b5cf6] text-white font-bold text-lg px-10 py-6 rounded-full shadow-[0_8px_20px_rgba(139,92,246,0.5)] hover:shadow-[0_12px_30px_rgba(139,92,246,0.7)] transition-all duration-300 hover:scale-105 border-4 border-purple-400"
-                  >
-                    <Icon name="RotateCcw" className="mr-2" size={24} />
-                    Сыграть ещё раз
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+      <div className="absolute inset-0 z-10">
+        {trees.map(tree => (
+          <div
+            key={tree.id}
+            className="absolute text-6xl transition-all duration-100"
+            style={{
+              left: `${tree.x}%`,
+              top: `${tree.y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
+          >
+            🌲
           </div>
-        )}
+        ))}
+      </div>
+
+      <div
+        className="absolute z-30 transition-all duration-100"
+        style={{
+          left: `${playerX}%`,
+          top: `${playerY}%`,
+          transform: 'translate(-50%, -50%)'
+        }}
+      >
+        <img
+          src="https://cdn.poehali.dev/files/fa659242-67d9-437e-9f84-22a30cf96914.jpeg"
+          alt="Pure Vanilla"
+          className="w-24 h-24 object-contain drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]"
+        />
+      </div>
+
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 z-20 opacity-70 transition-all duration-300"
+        style={{
+          transform: `translate(-50%, ${enemyDistance}%)`,
+          scale: `${1 + (100 - enemyDistance) / 100}`
+        }}
+      >
+        <img
+          src="https://cdn.poehali.dev/files/26d7468a-0bc8-400f-80f5-4398242213ac.jpeg"
+          alt="Shadow Milk"
+          className="w-32 h-32 object-contain drop-shadow-[0_0_30px_rgba(139,92,246,1)] animate-pulse"
+        />
+      </div>
+
+      <div className="absolute bottom-8 left-8 z-40">
+        <div
+          className="relative w-32 h-32 bg-gray-900/80 rounded-full border-4 border-gray-700 shadow-[0_0_20px_rgba(0,0,0,0.8)]"
+          onMouseDown={() => setJoystickActive(true)}
+          onMouseUp={handleJoystickEnd}
+          onMouseLeave={handleJoystickEnd}
+          onMouseMove={handleJoystickMove}
+          onTouchStart={() => setJoystickActive(true)}
+          onTouchEnd={handleJoystickEnd}
+          onTouchMove={handleJoystickMove}
+        >
+          <div
+            className="absolute top-1/2 left-1/2 w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg transition-all duration-100 border-2 border-purple-300"
+            style={{
+              transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="absolute bottom-8 right-8 z-40">
+        <Button
+          onClick={handleAttack}
+          className="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 hover:from-amber-500 hover:to-yellow-400 border-4 border-yellow-300 shadow-[0_0_30px_rgba(251,191,36,0.8)] hover:shadow-[0_0_50px_rgba(251,191,36,1)] transition-all hover:scale-110 active:scale-95"
+        >
+          <Icon name="Zap" size={48} className="text-white drop-shadow-lg" />
+        </Button>
       </div>
     </div>
   );
