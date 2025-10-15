@@ -1,146 +1,113 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import Icon from "@/components/ui/icon";
 
-interface Choice {
+interface DialogLine {
+  type: 'narration' | 'vanilla' | 'shadow';
   text: string;
-  nextScene: number;
+  showJumpscare?: boolean;
+  choices?: { text: string; nextScene: string }[];
 }
 
 interface Scene {
-  id: number;
+  id: string;
   background: string;
-  character?: string;
-  text: string;
-  speaker?: string;
-  choices?: Choice[];
+  dialogs: DialogLine[];
   isEnding?: boolean;
-  endingType?: 'good' | 'bad';
 }
 
 const Index = () => {
   const [gameStarted, setGameStarted] = useState(false);
-  const [currentScene, setCurrentScene] = useState(0);
+  const [currentScene, setCurrentScene] = useState<string>('start');
+  const [dialogIndex, setDialogIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState("");
   const [textComplete, setTextComplete] = useState(false);
+  const [showJumpscare, setShowJumpscare] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const scareAudioRef = useRef<HTMLAudioElement | null>(null);
+  const failAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const scenes: Scene[] = [
-    {
-      id: 0,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Я проснулся в тёмном лесу... Дождь не прекращается. Что-то пошло не так...",
-      choices: [
-        { text: "Осмотреться вокруг", nextScene: 1 },
-        { text: "Позвать на помощь", nextScene: 2 }
+  const scenes: Record<string, Scene> = {
+    start: {
+      id: 'start',
+      background: 'linear-gradient(to bottom, #1a1a2e, #0f0f1e)',
+      dialogs: [
+        { 
+          type: 'narration', 
+          text: 'Ванилла проснулся в каком-то странном подвале, он ничего не помнит' 
+        },
+        { 
+          type: 'vanilla', 
+          text: 'Что происходит, где я?!?!' 
+        },
+        { 
+          type: 'narration', 
+          text: 'Вдруг заходит странный полумрак полухз и хихикает',
+          showJumpscare: true
+        },
+        { 
+          type: 'shadow', 
+          text: 'Привет Детлеф петух! Ну как те тут?! Круто?!',
+          choices: [
+            { text: 'да имбуля', nextScene: 'path1' },
+            { text: 'ОТПУСТИ МЕНЯ ШУТ', nextScene: 'bad_ending' }
+          ]
+        }
       ]
     },
-    {
-      id: 1,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Вокруг только деревья и тьма. Внезапно я услышал жуткий смех за спиной...",
-      choices: [
-        { text: "Обернуться", nextScene: 3 },
-        { text: "Бежать прочь", nextScene: 4 }
+    path1: {
+      id: 'path1',
+      background: 'linear-gradient(to bottom, #1a1a2e, #0f0f1e)',
+      dialogs: [
+        {
+          type: 'shadow',
+          text: 'Ха-ха! Молодец, что согласился! Тогда поиграем в игру...'
+        },
+        {
+          type: 'vanilla',
+          text: 'В какую игру? Что происходит?!'
+        },
+        {
+          type: 'shadow',
+          text: 'Всё просто! Найди выход из подвала за 5 минут, или останешься здесь... НАВСЕГДА!',
+          choices: [
+            { text: 'Искать выход', nextScene: 'good_ending' },
+            { text: 'Отказаться играть', nextScene: 'bad_ending' }
+          ]
+        }
       ]
     },
-    {
-      id: 2,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Эхо моего голоса отразилось от деревьев. В ответ раздался зловещий хохот...",
-      choices: [
-        { text: "Искать укрытие", nextScene: 4 },
-        { text: "Стоять на месте", nextScene: 5 }
-      ]
+    good_ending: {
+      id: 'good_ending',
+      background: 'linear-gradient(to bottom, #4a5568, #2d3748)',
+      dialogs: [
+        {
+          type: 'narration',
+          text: 'Ванилла нашёл скрытую дверь за старыми ящиками...'
+        },
+        {
+          type: 'vanilla',
+          text: 'Я... я нашёл выход! Я свободен!'
+        },
+        {
+          type: 'shadow',
+          text: 'Молодец, малыш! Ты прошёл мой тест! Удачи в следующий раз... Ха-ха-ха!'
+        }
+      ],
+      isEnding: true
     },
-    {
-      id: 3,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/5e4e492f-e871-4161-b636-a5f2415f1e5e.jpeg",
-      speaker: "Shadow Milk",
-      text: "Ну привет, маленький волшебник... Думал, что сможешь от меня убежать?",
-      choices: [
-        { text: "Использовать магию света", nextScene: 6 },
-        { text: "Попытаться убежать", nextScene: 7 }
-      ]
-    },
-    {
-      id: 4,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Я бежал сквозь лес, ветки царапали лицо. Но шаги за спиной становились всё ближе...",
-      choices: [
-        { text: "Спрятаться за деревом", nextScene: 8 },
-        { text: "Продолжать бежать", nextScene: 9 }
-      ]
-    },
-    {
-      id: 5,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/5e4e492f-e871-4161-b636-a5f2415f1e5e.jpeg",
-      speaker: "Shadow Milk",
-      text: "Храбрый... или глупый? Теперь ты моя марионетка!",
-      isEnding: true,
-      endingType: 'bad'
-    },
-    {
-      id: 6,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Моя магия света отбросила Shadow Milk назад! Я нашёл путь к выходу из леса!",
-      isEnding: true,
-      endingType: 'good'
-    },
-    {
-      id: 7,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/5e4e492f-e871-4161-b636-a5f2415f1e5e.jpeg",
-      speaker: "Shadow Milk",
-      text: "Убежать? От меня?! Тьма настигает всех! Ха-ха-ха!",
-      isEnding: true,
-      endingType: 'bad'
-    },
-    {
-      id: 8,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Затаив дыхание, я ждал. Shadow Milk прошёл мимо... Я увидел просвет между деревьями!",
-      choices: [
-        { text: "Тихо пройти к выходу", nextScene: 10 },
-        { text: "Подождать ещё", nextScene: 5 }
-      ]
-    },
-    {
-      id: 9,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Мои ноги уже не держали... Я споткнулся о корень дерева...",
-      choices: [
-        { text: "Встать и защищаться", nextScene: 6 },
-        { text: "Сдаться судьбе", nextScene: 5 }
-      ]
-    },
-    {
-      id: 10,
-      background: "https://cdn.poehali.dev/files/5cc9fbcb-1daa-426d-b3b1-f90dbbed70f9.jpeg",
-      character: "https://cdn.poehali.dev/files/2097b897-7ece-44da-a38b-122df7e3913f.jpeg",
-      speaker: "Pure Vanilla",
-      text: "Я выбрался из проклятого леса... Свет рассвета встретил меня. Я... свободен!",
-      isEnding: true,
-      endingType: 'good'
+    bad_ending: {
+      id: 'bad_ending',
+      background: 'linear-gradient(to bottom, #1e3a8a, #1e1b4b)',
+      dialogs: [
+        {
+          type: 'shadow',
+          text: 'Офигел'
+        }
+      ],
+      isEnding: true
     }
-  ];
+  };
 
   useEffect(() => {
     if (gameStarted && !audioRef.current) {
@@ -153,7 +120,12 @@ const Index = () => {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      }
+      if (scareAudioRef.current) {
+        scareAudioRef.current.pause();
+      }
+      if (failAudioRef.current) {
+        failAudioRef.current.pause();
       }
     };
   }, [gameStarted]);
@@ -162,13 +134,17 @@ const Index = () => {
     if (!gameStarted) return;
     
     const scene = scenes[currentScene];
+    const dialog = scene.dialogs[dialogIndex];
+    
+    if (!dialog) return;
+
     setDisplayedText("");
     setTextComplete(false);
     
     let index = 0;
     const interval = setInterval(() => {
-      if (index < scene.text.length) {
-        setDisplayedText(scene.text.slice(0, index + 1));
+      if (index < dialog.text.length) {
+        setDisplayedText(dialog.text.slice(0, index + 1));
         index++;
       } else {
         setTextComplete(true);
@@ -177,23 +153,61 @@ const Index = () => {
     }, 50);
 
     return () => clearInterval(interval);
-  }, [currentScene, gameStarted]);
+  }, [currentScene, dialogIndex, gameStarted]);
 
-  const handleChoice = (nextScene: number) => {
+  const handleNext = () => {
+    const scene = scenes[currentScene];
+    const dialog = scene.dialogs[dialogIndex];
+
+    if (dialog.showJumpscare && textComplete) {
+      setShowJumpscare(true);
+      if (!scareAudioRef.current) {
+        scareAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2803/2803-preview.mp3');
+        scareAudioRef.current.volume = 0.6;
+      }
+      scareAudioRef.current.play();
+      
+      setTimeout(() => {
+        setShowJumpscare(false);
+        setDialogIndex(dialogIndex + 1);
+      }, 1500);
+      return;
+    }
+
+    if (dialogIndex < scene.dialogs.length - 1) {
+      setDialogIndex(dialogIndex + 1);
+    }
+  };
+
+  const handleChoice = (nextScene: string) => {
+    if (nextScene === 'bad_ending') {
+      if (!failAudioRef.current) {
+        failAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+        failAudioRef.current.volume = 0.5;
+      }
+      failAudioRef.current.play();
+    }
+    
     setCurrentScene(nextScene);
+    setDialogIndex(0);
   };
 
   const startGame = () => {
     setGameStarted(true);
-    setCurrentScene(0);
+    setCurrentScene('start');
+    setDialogIndex(0);
   };
 
   const restartGame = () => {
     setGameStarted(false);
-    setCurrentScene(0);
+    setCurrentScene('start');
+    setDialogIndex(0);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
   };
-
-  const scene = scenes[currentScene];
 
   if (!gameStarted) {
     return (
@@ -232,22 +246,85 @@ const Index = () => {
           <Button
             onClick={startGame}
             className="bg-gradient-to-r from-blue-900 to-blue-700 hover:from-blue-800 hover:to-blue-600 text-white font-bold text-2xl px-16 py-8 rounded-lg shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:shadow-[0_0_50px_rgba(59,130,246,0.7)] transition-all duration-300 hover:scale-105 border-2 border-blue-500"
-          >Начинай махыч </Button>
+          >
+            НАЧАТЬ
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const scene = scenes[currentScene];
+  const currentDialog = scene.dialogs[dialogIndex];
+
+  if (showJumpscare) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center animate-pulse">
+        <img
+          src="https://cdn.poehali.dev/files/2c498c4c-8c52-47bd-ad8d-78cd59c72e99.jpeg"
+          alt="Jumpscare"
+          className="w-full h-full object-cover animate-ping"
+          style={{ animation: 'ping 0.3s ease-in-out infinite' }}
+        />
+      </div>
+    );
+  }
+
+  if (scene.isEnding) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center relative overflow-hidden"
+        style={{ background: scene.id === 'bad_ending' ? 'linear-gradient(to bottom, #1e3a8a, #1e1b4b)' : 'linear-gradient(to bottom, #4a5568, #2d3748)' }}
+      >
+        {scene.id === 'bad_ending' && (
+          <div className="absolute inset-0">
+            <img
+              src="https://cdn.poehali.dev/files/c52c4168-102e-4b57-9adb-5f47812a1584.jpeg"
+              alt="Game Over"
+              className="w-full h-full object-cover opacity-40"
+            />
+          </div>
+        )}
+        
+        <div className="relative z-10 text-center px-4">
+          {scene.id === 'bad_ending' ? (
+            <>
+              <div className="text-8xl mb-8 animate-bounce">💀</div>
+              <h2 className="text-6xl font-bold text-red-500 mb-4 drop-shadow-[0_0_30px_rgba(239,68,68,1)]">
+                GAME OVER
+              </h2>
+              <p className="text-3xl text-red-400 mb-8 font-bold">
+                {currentDialog.text}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-8xl mb-8 animate-bounce">🎉</div>
+              <h2 className="text-6xl font-bold text-green-400 mb-4 drop-shadow-[0_0_30px_rgba(74,222,128,1)]">
+                ПОБЕДА!
+              </h2>
+              <p className="text-2xl text-green-300 mb-8">
+                Ты смог сбежать от Шадоу Милка!
+              </p>
+            </>
+          )}
+          
+          <Button
+            onClick={restartGame}
+            className="bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-600 hover:to-blue-800 text-white font-bold text-xl px-12 py-6 rounded-lg"
+          >
+            Начать заново
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-black">
-      <div 
-        className="absolute inset-0 bg-cover bg-center transition-all duration-1000"
-        style={{ 
-          backgroundImage: `url('${scene.background}')`,
-          filter: 'brightness(0.5)'
-        }}
-      />
-
+    <div 
+      className="min-h-screen relative overflow-hidden"
+      style={{ background: scene.background }}
+    >
       <div className="rain-container absolute inset-0 pointer-events-none z-10">
         {Array.from({ length: 100 }).map((_, i) => (
           <div
@@ -262,76 +339,64 @@ const Index = () => {
         ))}
       </div>
 
-      <div className="relative z-20 min-h-screen flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-8">
-          {scene.character && (
-            <div className="max-w-md">
+      <div className="relative z-20 min-h-screen flex flex-col justify-end pb-4 px-4">
+        {currentDialog.type !== 'narration' && (
+          <div className="mb-4 flex justify-center">
+            <div className="bg-black/80 rounded-2xl p-4 border-2 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]">
               <img
-                src={scene.character}
-                alt={scene.speaker}
-                className="w-full h-auto drop-shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-float"
+                src={currentDialog.type === 'vanilla' 
+                  ? 'https://cdn.poehali.dev/files/8a55b115-da1f-4d2c-8611-d93c420ba153.jpeg'
+                  : 'https://cdn.poehali.dev/files/808e85c0-7f2a-4e3d-a314-73ffa0755a6a.jpeg'
+                }
+                alt={currentDialog.type === 'vanilla' ? 'Pure Vanilla' : 'Shadow Milk'}
+                className="w-32 h-32 object-contain animate-float"
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        <Card className="mx-4 mb-4 bg-black/90 backdrop-blur-md border-2 border-blue-900 shadow-[0_0_30px_rgba(59,130,246,0.4)]">
+        <Card className="bg-black/90 backdrop-blur-md border-2 border-blue-900 shadow-[0_0_30px_rgba(59,130,246,0.4)]">
           <CardContent className="p-6">
-            {scene.speaker && (
-              <h3 className="text-2xl font-bold text-blue-400 mb-3">
-                {scene.speaker}
-              </h3>
-            )}
-            
-            <p className="text-white text-lg leading-relaxed mb-6 min-h-[100px]">
-              {displayedText}
-              {!textComplete && <span className="animate-pulse">▌</span>}
-            </p>
-
-            {scene.isEnding ? (
-              <div className="space-y-4">
-                <div className="text-center py-4">
-                  {scene.endingType === 'good' ? (
-                    <div>
-                      <div className="text-6xl mb-4">🌟</div>
-                      <h2 className="text-4xl font-bold text-yellow-400 mb-2">
-                        ХОРОШАЯ КОНЦОВКА
-                      </h2>
-                      <p className="text-green-400 text-xl">Ты спасён!</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="text-6xl mb-4">💀</div>
-                      <h2 className="text-4xl font-bold text-red-500 mb-2">
-                        ПЛОХАЯ КОНЦОВКА
-                      </h2>
-                      <p className="text-red-400 text-xl">Тьма поглотила тебя...</p>
-                    </div>
-                  )}
-                </div>
-                <Button
-                  onClick={restartGame}
-                  className="w-full bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-600 hover:to-blue-800 text-white font-bold text-lg py-6"
-                >
-                  <Icon name="RotateCcw" className="mr-2" size={20} />
-                  Начать заново
-                </Button>
-              </div>
+            {currentDialog.type === 'narration' ? (
+              <p className="text-gray-400 text-lg leading-relaxed mb-4 min-h-[80px] italic">
+                {displayedText}
+                {!textComplete && <span className="animate-pulse">▌</span>}
+              </p>
             ) : (
-              textComplete && scene.choices && (
-                <div className="space-y-3">
-                  {scene.choices.map((choice, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => handleChoice(choice.nextScene)}
-                      className="w-full bg-gradient-to-r from-blue-800/80 to-blue-900/80 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-lg py-6 border border-blue-600 hover:border-blue-400 transition-all"
-                    >
-                      {choice.text}
-                    </Button>
-                  ))}
-                </div>
-              )
+              <>
+                <h3 className="text-2xl font-bold mb-3" style={{
+                  color: currentDialog.type === 'vanilla' ? '#fbbf24' : '#8b5cf6',
+                  fontFamily: currentDialog.type === 'vanilla' ? 'Fredoka, sans-serif' : 'inherit'
+                }}>
+                  {currentDialog.type === 'vanilla' ? 'Pure Vanilla' : 'Shadow Milk'}
+                </h3>
+                <p className="text-white text-lg leading-relaxed mb-4 min-h-[80px]">
+                  {displayedText}
+                  {!textComplete && <span className="animate-pulse">▌</span>}
+                </p>
+              </>
             )}
+
+            {textComplete && currentDialog.choices ? (
+              <div className="space-y-3">
+                {currentDialog.choices.map((choice, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => handleChoice(choice.nextScene)}
+                    className="w-full bg-gradient-to-r from-blue-800/80 to-blue-900/80 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-lg py-6 border border-blue-600 hover:border-blue-400 transition-all"
+                  >
+                    {choice.text}
+                  </Button>
+                ))}
+              </div>
+            ) : textComplete && dialogIndex < scene.dialogs.length - 1 ? (
+              <Button
+                onClick={handleNext}
+                className="w-full bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-600 hover:to-blue-800 text-white font-bold text-lg py-4"
+              >
+                Продолжить ▶
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       </div>
